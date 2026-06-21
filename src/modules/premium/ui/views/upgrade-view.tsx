@@ -9,16 +9,89 @@ import { LoadingState } from "@/components/loading-state";
 
 import { PricingCard } from "../components/pricing-card";
 
+const fallbackProducts = [
+  {
+    id: "monthly",
+    name: "Monthly",
+    description: "For teams getting started",
+    metadata: {
+      variant: "default",
+      badge: null,
+    },
+    prices: [
+      {
+        amountType: "fixed",
+        priceAmount: 2900,
+        recurringInterval: "month",
+      },
+    ],
+    benefits: [
+      { description: "Unlimited meetings" },
+      { description: "Unlimited transcripts" },
+      { description: "Unlimited recording storage" },
+      { description: "Unlimited agents" },
+    ],
+  },
+  {
+    id: "yearly",
+    name: "Yearly",
+    description: "For teams that need to scale",
+    metadata: {
+      variant: "highlighted",
+      badge: "Best Value",
+    },
+    prices: [
+      {
+        amountType: "fixed",
+        priceAmount: 25900,
+        recurringInterval: "year",
+      },
+    ],
+    benefits: [
+      { description: "Unlimited agents" },
+      { description: "Unlimited recording storage" },
+      { description: "Unlimited transcripts" },
+      { description: "Unlimited meetings" },
+      { description: "2 months free" },
+    ],
+  },
+  {
+    id: "enterprise",
+    name: "Enterprise",
+    description: "For teams with special requests",
+    metadata: {
+      variant: "default",
+      badge: null,
+    },
+    prices: [
+      {
+        amountType: "fixed",
+        priceAmount: 99900,
+        recurringInterval: "year",
+      },
+    ],
+    benefits: [
+      { description: "Unlimited agents" },
+      { description: "Unlimited recording storage" },
+      { description: "Unlimited transcripts" },
+      { description: "Unlimited meetings" },
+      { description: "Dedicated Discord support" },
+    ],
+  },
+];
+
 export const UpgradeView = () => {
   const trpc = useTRPC();
 
-   const { data: products } = useSuspenseQuery(
+  const { data: products } = useSuspenseQuery(
     trpc.premium.getProducts.queryOptions()
   );
 
   const { data: currentSubscription } = useSuspenseQuery(
     trpc.premium.getCurrentSubscription.queryOptions()
   );
+
+  const displayProducts = products.length > 0 ? products : fallbackProducts;
 
   return (
     <div className="flex-1 py-4 px-4 md:px-8 flex flex-col gap-y-10">
@@ -30,13 +103,16 @@ export const UpgradeView = () => {
           </span>{" "}
           plan
         </h5>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {products.map((product) => {
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-5xl">
+          {displayProducts.map((product) => {
             const isCurrentProduct = currentSubscription?.id === product.id;
             const isPremium = !!currentSubscription;
+            const canCheckout = products.some(({ id }) => id === product.id);
 
             let buttonText = "Upgrade";
-            let onClick = () => authClient.checkout({ products: [product.id] });
+            let onClick = canCheckout
+              ? () => authClient.checkout({ products: [product.id] })
+              : () => {};
 
             if (isCurrentProduct) {
               buttonText = "Manage";
@@ -58,12 +134,18 @@ export const UpgradeView = () => {
                 }
                 title={product.name}
                 price={
-                  product.prices[0].amountType === "fixed"
-                    ? product.prices[0].priceAmount / 100
-                    : 0
+                  (() => {
+                    const p = product.prices[0];
+                    if (!p) return 0;
+                    return p.amountType === "fixed" ? p.priceAmount / 100 : 0;
+                  })()
                 }
                 description={product.description}
-                priceSuffix={`/${product.prices[0].recurringInterval}`}
+                priceSuffix={(() => {
+                  const p = product.prices[0];
+                  if (!p || !("recurringInterval" in p)) return "";
+                  return `/${p.recurringInterval}`;
+                })()}
                 features={product.benefits.map(
                   (benefit) => benefit.description
                 )}

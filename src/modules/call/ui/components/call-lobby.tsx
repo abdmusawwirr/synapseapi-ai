@@ -27,7 +27,7 @@ const DisabledVideoPreview = () => {
       participant={
         {
           name: data?.user.name ?? "",
-          image: 
+          image:
             data?.user.image ??
             generateAvatarUri({
               seed: data?.user.name ?? "",
@@ -68,7 +68,7 @@ export const CallLobby = ({ onJoin }: Props) => {
             DisabledVideoPreview={
               hasBrowserMediaPermission
                 ? DisabledVideoPreview
-                : AllowBrowserPermissions 
+                : AllowBrowserPermissions
             }
           />
           <div className="flex gap-x-2">

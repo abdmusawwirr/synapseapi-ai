@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
-const pricingCardVariants = cva("rounded-lg p-4 py-6 w-full", {
+const pricingCardVariants = cva("rounded-lg p-4 py-6 w-full min-h-[315px]", {
   variants: {
     variant: {
       default: "bg-white text-black",

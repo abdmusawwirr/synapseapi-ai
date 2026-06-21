@@ -1,7 +1,5 @@
-import OpenAI from "openai";
 import { and, eq, not } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
-import { ChatCompletionMessageParam } from "openai/resources/index.mjs";
 import {
   MessageNewEvent,
   CallEndedEvent,
@@ -18,7 +16,37 @@ import { inngest } from "@/inngest/client";
 import { generateAvatarUri } from "@/lib/avatar";
 import { streamChat } from "@/lib/stream-chat";
 
-const openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+const groqModel = process.env.GROQ_MODEL ?? "llama-3.1-8b-instant";
+type GroqMessage = {
+  role: "system" | "user" | "assistant";
+  content: string;
+};
+
+async function createGroqChatCompletion(messages: GroqMessage[]) {
+  const response = await fetch(
+    "https://api.groq.com/openai/v1/chat/completions",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: groqModel,
+        messages,
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Groq request failed: ${response.status} ${errorText}`);
+  }
+
+  return response.json() as Promise<{
+    choices: Array<{ message: { content: string | null } }>;
+  }>;
+}
 
 function verifySignatureWithSDK(body: string, signature: string): boolean {
   return streamVideo.verifyWebhook(body, signature);
@@ -83,25 +111,8 @@ export async function POST(req: NextRequest) {
       })
       .where(eq(meetings.id, existingMeeting.id));
 
-    const [existingAgent] = await db
-      .select()
-      .from(agents)
-      .where(eq(agents.id, existingMeeting.agentId));
-
-    if (!existingAgent) {
-      return NextResponse.json({ error: "Agent not found" }, { status: 404 });
-    }
-
-    const call = streamVideo.video.call("default", meetingId);
-    const realtimeClient = await streamVideo.video.connectOpenAi({
-      call,
-      openAiApiKey: process.env.OPENAI_API_KEY!,
-      agentUserId: existingAgent.id,
-    });
-
-    realtimeClient.updateSession({
-      instructions: existingAgent.instructions,
-    });
+    // Stream's realtime AI bridge is OpenAI-only, so live calls run without
+    // attaching a paid OpenAI realtime agent.
   } else if (eventType === "call.session_participant_left") {
     const event = payload as CallSessionParticipantLeftEvent;
     const meetingId = event.call_cid.split(":")[1]; // call_cid is formatted as "type:id"
@@ -219,25 +230,22 @@ export async function POST(req: NextRequest) {
       const previousMessages = channel.state.messages
         .slice(-5)
         .filter((msg) => msg.text && msg.text.trim() !== "")
-        .map<ChatCompletionMessageParam>((message) => ({
+        .map<GroqMessage>((message) => ({
           role: message.user?.id === existingAgent.id ? "assistant" : "user",
           content: message.text || "",
         }));
 
-      const GPTResponse = await openaiClient.chat.completions.create({
-        messages: [
-          { role: "system", content: instructions },
-          ...previousMessages,
-          { role: "user", content: text },
-        ],
-        model: "gpt-4o",
-      });
+      const groqResponse = await createGroqChatCompletion([
+        { role: "system", content: instructions },
+        ...previousMessages,
+        { role: "user", content: text },
+      ]);
 
-      const GPTResponseText = GPTResponse.choices[0].message.content;
+      const groqResponseText = groqResponse.choices[0].message.content;
 
-      if (!GPTResponseText) {
+      if (!groqResponseText) {
         return NextResponse.json(
-          { error: "No response from GPT" },
+          { error: "No response from Groq" },
           { status: 400 }
         );
       }
@@ -254,7 +262,7 @@ export async function POST(req: NextRequest) {
       });
 
       channel.sendMessage({
-        text: GPTResponseText,
+        text: groqResponseText,
         user: {
           id: existingAgent.id,
           name: existingAgent.name,

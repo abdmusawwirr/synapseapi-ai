@@ -1,4 +1,4 @@
-# Meet AI
+# Synapse API
 
 AI-powered video call application with real-time agents, meeting summaries, and post-call features.
 
@@ -22,8 +22,8 @@ AI-powered video call application with real-time agents, meeting summaries, and 
 - tRPC
 - DrizzleORM
 - Neon Database
-- OpenAI
-- Stream Video & Chat
+- Groq for summaries and post-meeting chat
+- Stream Video & Chat for live calls
 - Better Auth
 - Inngest
 - Polar

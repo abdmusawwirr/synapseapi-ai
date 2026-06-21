@@ -31,13 +31,19 @@ Example:
 - Feature X automatically does Y
 - Mention of integration with Z
   `.trim(),
-  model: openai({ model: "gpt-4o", apiKey: process.env.OPENAI_API_KEY }),
+  model: openai({
+    model: process.env.GROQ_MODEL ?? "llama-3.1-8b-instant",
+    apiKey: process.env.GROQ_API_KEY,
+    baseUrl: "https://api.groq.com/openai/v1/",
+  }),
 });
 
 export const meetingsProcessing = inngest.createFunction(
-  { id: "meetings/processing" },
-  { event: "meetings/processing" },
-  async ({ event, step }) => {
+  { 
+    id: "meetings/processing",
+    triggers: [{ event: "meetings/processing" }], // ✅ moved here
+  },
+  async ({ event, step }) => {  // ✅ handler is now second argument
     const response = await step.run("fetch-transcript", async () => {
       return fetch(event.data.transcriptUrl).then((res) => res.text());
     });
@@ -81,17 +87,13 @@ export const meetingsProcessing = inngest.createFunction(
         if (!speaker) {
           return {
             ...item,
-            user: {
-              name: "Unknown",
-            },
+            user: { name: "Unknown" },
           };
         }
 
         return {
           ...item,
-          user: {
-            name: speaker.name,
-          },
+          user: { name: speaker.name },
         };
       });
     });
@@ -108,8 +110,7 @@ export const meetingsProcessing = inngest.createFunction(
           summary: (output[0] as TextMessage).content as string,
           status: "completed",
         })
-        .where(eq(meetings.id, event.data.meetingId))
-    })
+        .where(eq(meetings.id, event.data.meetingId));
+    });
   },
 );
-
