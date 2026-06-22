@@ -5,11 +5,11 @@
   "overrides": {
     "inngest": "^4.7.0"
   },
-  "scripts": {
+    "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "dev:webhook": "ngrok http --url=https://transpose-decaf-attitude.ngrok-free.dev 3000"
