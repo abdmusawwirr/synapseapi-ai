@@ -31,17 +31,19 @@ Example:
 - Feature X automatically does Y
 - Mention of integration with Z
   `.trim(),
-  model: openai({
-    model: process.env.GROQ_MODEL ?? "llama-3.1-8b-instant",
+  model: openai({  // ✅ keep openai() but point it at Groq's OpenAI-compatible endpoint
+    model: process.env.GROQ_MODEL ?? "llama-3.3-70b-versatile",
     apiKey: process.env.GROQ_API_KEY,
-    baseUrl: "https://api.groq.com/openai/v1/",
+    baseUrl: "https://api.groq.com/openai/v1",  // ✅ removed trailing slash
   }),
 });
 
 export const meetingsProcessing = inngest.createFunction(
-  { id: "meetings/processing" },
-  { event: "meetings/processing" },
-  async ({ event, step }) => {
+  {
+    id: "meetings/processing",
+    triggers: [{ event: "meetings/processing" }],  // ✅ fixed
+  },
+  async ({ event, step }) => {  // ✅ handler is now second argument
     const response = await step.run("fetch-transcript", async () => {
       return fetch(event.data.transcriptUrl).then((res) => res.text());
     });
@@ -110,5 +112,5 @@ export const meetingsProcessing = inngest.createFunction(
         })
         .where(eq(meetings.id, event.data.meetingId));
     });
-  }
+  },
 );

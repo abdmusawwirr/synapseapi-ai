@@ -1,12 +1,15 @@
 {
-  "name": "synapse-api",
+  "name": "Synapse API",
   "version": "0.1.0",
   "private": true,
+  "overrides": {
+    "inngest": "^4.7.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint .",
+    "lint": "next lint",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "dev:webhook": "ngrok http --url=https://transpose-decaf-attitude.ngrok-free.dev 3000"
