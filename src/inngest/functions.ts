@@ -39,11 +39,9 @@ Example:
 });
 
 export const meetingsProcessing = inngest.createFunction(
-  { 
-    id: "meetings/processing",
-    triggers: [{ event: "meetings/processing" }], // ✅ moved here
-  },
-  async ({ event, step }) => {  // ✅ handler is now second argument
+  { id: "meetings/processing" },
+  { event: "meetings/processing" },
+  async ({ event, step }) => {
     const response = await step.run("fetch-transcript", async () => {
       return fetch(event.data.transcriptUrl).then((res) => res.text());
     });
@@ -112,5 +110,5 @@ export const meetingsProcessing = inngest.createFunction(
         })
         .where(eq(meetings.id, event.data.meetingId));
     });
-  },
+  }
 );
